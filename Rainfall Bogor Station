@@ -1,0 +1,62 @@
+#Import Libraries
+import requests
+import re
+import io 
+import pandas as pd
+import numpy as np
+import seaborn as sns
+
+cookies = {'Clientssl_01': '654420160.20480.0000'}
+he = {"Authorization":"Basic cmFpbm1hcDpOaXNrdXIrMTQwNA=="}
+
+#URL
+urlbogor = "https://sharaku.eorc.jaxa.jp/cgi-bin/trmm/GSMaP/tilemap/show_graph.cgi?flag=1&st=2019102601&ed=2019112601&lat0=-7.5&lon0=105.5&lang=en"
+r = requests.get(urlbogor,cookies=cookies)
+csv_url = re.findall(r"//sharaku.eorc.jaxa.jp/GSMaP/csv/\w+.+.csv",str(r.content))[0]
+csv_link = "https:{}".format(csv_url)
+
+r = requests.get(csv_link,cookies=cookies,headers=he)
+r
+
+def get_csv(year, start, end):
+    
+    main_url = "https://sharaku.eorc.jaxa.jp/cgi-bin/trmm/GSMaP/tilemap/show_graph.cgi?flag=1"
+    st = "{}{:02d}0101".format(year,start)
+    ed = "{}{:02d}0101".format(year+1,end)
+    lat_long= "lat0=-7.5&lon0=105.5&lang=en"
+    
+    url = "{}&st={}&ed={}&{}".format(main_url,st,ed,lat_long)
+    print("# get csv from {}".format(url))
+    
+    r = requests.get(url,cookies=cookies)
+    csv_url = re.findall(r"//sharaku.eorc.jaxa.jp/GSMaP/csv/\w+.+.csv",str(r.content))[0]
+    csv_link = "https:{}".format(csv_url)   
+    r = requests.get(csv_link,cookies=cookies,headers=he)
+    
+    
+    return r.content
+    
+ df = pd.read_csv(io.BytesIO(get_csv(2019,1,1)))
+ df = df.reset_index()
+ df
+ 
+ #save to CSV
+ df.to_csv("Tahun 2019 bogor.csv",index=False)
+ 
+ #Edit first and end
+ year = np.arange(2010,2019)
+ month = np.arange(1,12)
+ 
+ for y in year:
+    print("##### Get data from "+str(y)+str(y+1))
+    csv = get_csv(y,1,1)
+    df = pd.read_csv(io.BytesIO(csv))
+    print("##### Mean Hujan tahun {} : {} ".format(y,df["value"].max()))
+    
+    df.to_csv("hujan_bogor{}0101-{}0101.csv".format(y,y+1),index=False)
+    
+ 
+ print (df)
+ df2 = pd.read_csv(io.BytesIO(get_csv(2019,1,1)))
+ 
+ df.to_csv("Tahun 2019.csv",index=False)
